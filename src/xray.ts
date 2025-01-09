@@ -2,8 +2,8 @@
 // https://developer.chrome.com/docs/extensions/reference/api/scripting#type-ExecutionWorld
 
 /// <reference types="chrome"/>
-
 import * as browser from "webextension-polyfill";
+import type{Browser} from "webextension-polyfill";
 
 interface ExtendedWindow extends Window{
   hasRun?: boolean;
@@ -25,16 +25,16 @@ function getBrowserFamily(): BrowserFamily{
 const browserFamily = getBrowserFamily();
 type Global = typeof global;
 interface ExtendedGlobal extends Omit<Global,"window">{
-  browser: any
+  browser: Browser | typeof chrome,
   window: ExtendedWindow
 };
 export const extendedGlobal = ((globalThis as unknown) as ExtendedGlobal);
 if( browserFamily === "chrome"){
   // Chrome does not support the browser namespace yet.
-  extendedGlobal.browser = chrome;
+  extendedGlobal.browser = chrome as typeof chrome;
 }else{
   // Firefox
-  extendedGlobal.browser = browser;
+  extendedGlobal.browser = browser as Browser;
 }
 extendedGlobal.window = extendedWindow;
 
@@ -79,17 +79,26 @@ async function getCurrentTabId(){
     .then((tabs)=>{ return tabs[0]})
     .catch((e)=>{throw e})
   ;
-  return (await activeTab).id;
+  const tabId = activeTab
+    .then((tab)=>{ return tab.id })
+    .catch((e)=>{throw e})
+  return tabId;
 }
 
 
 export class Xray{
-  static async executeMain(cb: <T>(arg: T) => any){
-    return extendedGlobal.browser.scripting.executeScript({
-      target: {tabId: await getCurrentTabId()},
-      world: "MAIN",
-      func: cb
-    })
+  static async executeMain(cb: <T>(...args: T[]) => any ){
+    try{
+      const tabId = await getCurrentTabId();
+      if( ! tabId ){ 
+        throw new Error("tabId not found");
+      };
+      return extendedGlobal.browser.scripting.executeScript({
+        target: {tabId: 2},
+        world: "MAIN",
+        func: cb
+      })
+    }catch(e){throw e}
   }
 
   static async exposeObject(objKey: string){

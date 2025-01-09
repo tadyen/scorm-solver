@@ -11,35 +11,83 @@ import { extendedGlobal, extendedWindow, Xray } from "xray.ts";
 (()=>{
   if(extendedWindow.hasRun){ return; };
   extendedWindow.hasRun = true;
-  content();
+  const reactRootMountPoint = mountReact();
 })();
 
 const browser = extendedGlobal.browser;
 
-function content(){
-  window.addEventListener("focus", ()=>{
-    console.log("window focus event");
-    Xray.exposeObject("iSpring").then((v)=>{console.log(v)});
-  });
-  
-  window.addEventListener("click",()=>{
-    console.log("window click event");
-  });
-  
-  const reactRootMountPrototype = document.createElement("null");
+type RootMountPoint = { root: ReturnType<typeof createRoot> | undefined };
+function mountReact(): RootMountPoint{
+  const reactRootMountPrototype = document.createElement("div");
   reactRootMountPrototype.id = "react-root-mountpoint";
-  type RootMountPoint = { root: ReturnType<typeof createRoot> | undefined };
-  const reactRootMountPoint: RootMountPoint = { root: undefined };
+  const reactRootMountPoint: RootMountPoint = {root: undefined};
   if( document.getElementById(reactRootMountPrototype.id) === null ){
     document.body.prepend(reactRootMountPrototype);
-    reactRootMountPoint.root = createRoot(document.getElementById(reactRootMountPrototype.id) as HTMLElement);
   }
-  reactRootMountPoint.root?.render(<React.StrictMode><ContentScript/></React.StrictMode>);
-
+  reactRootMountPoint.root = createRoot(document.getElementById(reactRootMountPrototype.id) as HTMLElement);
+  reactRootMountPoint.root?.render(<React.StrictMode><Content/></React.StrictMode>);
+  return reactRootMountPoint;
 }
 
+function Content(){
+  const debounceTimerResetMS = 500;
+  const debounceTimerUpdateIntervalMS = 100; 
+  
+  const [pageInteract, setPageInteract] = React.useState(false);
+  const [debounceTimer, setDebounceTimer] = React.useState(0);
+  const [debounceTimerLock, setDebounceTimerLock] = React.useState(false);
+  
+  // Debounce timer
+  React.useEffect(()=>{
+    if( ! debounceTimerLock ){
+      setDebounceTimerLock(true);
+      (async()=>{
+        await new Promise(f => setTimeout(f, debounceTimerUpdateIntervalMS));
+        setDebounceTimer((previous)=>{
+          const next = previous - debounceTimerUpdateIntervalMS;
+          return (next > 0 ? next : 0);
+        })
+        setDebounceTimerLock(false);
+      })().catch(console.error);
+    }
+    if( debounceTimer <= 0){
+      setDebounceTimerLock(false);
+      setDebounceTimer(0);
+    }
+  },[debounceTimer])
 
-function ContentScript(){
+  // Reject interactions and refresh timer 
+  const refresh = React.useCallback(()=>{
+    setDebounceTimer((x)=>{
+      if(x <= 0){
+        setPageInteract(true);
+      }
+      return debounceTimerResetMS;
+    });
+  },[]);
+
+  // apply event listeners to check for page interactions
+  React.useEffect(()=>{
+    window.addEventListener("focus", ()=>{
+      refresh();
+    });
+    window.addEventListener("click",()=>{
+      refresh();
+    });
+  },[]);
+
+  // handle re-updates on page-interactions
+  React.useEffect(()=>{
+    function handlePageInteract(){
+
+    }
+    setPageInteract((x)=>{
+      if( ! x ){ return false }
+      handlePageInteract();
+      return false
+    });
+  },[pageInteract]);
+
   return (<></>)
 }
 
