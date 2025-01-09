@@ -6,6 +6,7 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
 import { extendedGlobal, extendedWindow, Xray } from "xray.ts";
 
 (()=>{
@@ -33,7 +34,7 @@ function Content(){
   const debounceTimerResetMS = 500;
   const debounceTimerUpdateIntervalMS = 100; 
   
-  const [pageInteract, setPageInteract] = React.useState(false);
+  const [pageInteracted, setPageInteracted] = React.useState(false);
   const [debounceTimer, setDebounceTimer] = React.useState(0);
   const [debounceTimerLock, setDebounceTimerLock] = React.useState(false);
   
@@ -60,7 +61,7 @@ function Content(){
   const refresh = React.useCallback(()=>{
     setDebounceTimer((x)=>{
       if(x <= 0){
-        setPageInteract(true);
+        setPageInteracted(true);
       }
       return debounceTimerResetMS;
     });
@@ -78,20 +79,30 @@ function Content(){
 
   // handle re-updates on page-interactions
   React.useEffect(()=>{
-    function handlePageInteract(){
-
-    }
-    setPageInteract((x)=>{
+    setPageInteracted((x)=>{
       if( ! x ){ return false }
-      handlePageInteract();
+      (async()=>{
+        try{
+          await handlePageInteraction();
+        }catch{console.error}
+      })();
       return false
     });
-  },[pageInteract]);
+  },[pageInteracted]);
 
-  return (<></>)
+  const solveButtonNode = document.getElementById("solve-button-root");
+  if( solveButtonNode !== null){
+    return (
+      <>
+        {createPortal(<SolveButton/>, solveButtonNode)}
+      </>
+    )
+  }else{
+    return (<></>)
+  }
 }
 
-async function handleScormClick(){
+async function handlePageInteraction(){
   const isQuiz = ( document.querySelector('.quiz-control-panel') !== null );
   const mainContainer = document.querySelector('.main-container') as HTMLElement|null;
   if(mainContainer === null){
@@ -108,15 +119,20 @@ async function handleScormClick(){
       solveButtonRoot.id="solve-button-root";
       submitContainer?.prepend(solveButtonRoot);
     }
-    const solveButtonNode = document.getElementById("solve-button-root") as HTMLElement;
-    const solveButtonReactRoot = createRoot(solveButtonNode);
-    solveButtonReactRoot.render(<SolveButton/>);
   }
   return Promise.resolve(true);
 }
 
 function SolveButton(){
   function handleClick(){
+    (async ()=>{
+      console.log("solve button async call")
+      try{
+        const iSpring = await Xray.exposeObject("iSpring")
+        const lms = iSpring.LMS.instance();
+        console.log(lms);
+      }catch{console.error}
+    })();
   }
 
   return(
