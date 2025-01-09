@@ -1,6 +1,9 @@
 # Static build
 build/
 
+# developer trash
+stash/
+
 # Logs
 logs
 *.log

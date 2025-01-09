@@ -1,24 +1,37 @@
 {
-    "manifest_version": 2,
-    "name": "Scorm-solver",
-    "version": "1.0.0",
+  "manifest_version": 3,
+  "name": "Scorm-solver",
+  "version": "0.1.0",
 
-    "description": "Solves SCORM elearning",
+  "description": "Solves SCORM elearning",
 
-    "icons": {
-        "48": "icons/border-48.png"
+  "icons": {
+    "48": "icons/icon-48.png"
+  },
+  "host_permissions": [
+    "*://*.scormenginecdn.e3learning.com.au/*",
+    "*://*.kineoportal.com.au/courses/*"
+  ],
+  "permissions": [
+    "scripting",
+    "activeTab"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.scormenginecdn.e3learning.com.au/files-path-content/*"],
+      "js": [ "scorm.js" ],
+      "run_at": "document_idle"
     },
-
-    "content_scripts": [
-        {
-        "matches": ["*://*.mozilla.org/*"],
-        "js": ["scorm-solver.js"]
-        }
-    ],
-    "browser_specific_settings": {
-    "gecko": {
-        "id": "scormsolver@tadyen.dev"
-        }
+    {
+      "matches": ["*://*.kineoportal.com.au/courses/*/quiz*"],
+      "js": [ "kineo.js" ],
+      "run_at": "document_idle"
     }
+  ],
+  "browser_specific_settings": {
+  "gecko": {
+    "id": "scormsolver@tadyen.dev"
+    }
+  }
 }
   
