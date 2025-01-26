@@ -1,6 +1,6 @@
 // interaction checker provider 
 
-import React from "react";
+import React, { Children } from "react";
 
 type EventHandler = ()=>(any | Promise<any>);
 
@@ -8,11 +8,16 @@ interface Props {
   onInteract: EventHandler,
   debounceTimerResetMS?: number,
   debounceTimerUpdateIntervalMS?: number,
+  children?: React.JSX.Element;
 }
-export default function InteractionChecker({ onInteract, debounceTimerResetMS = 500, debounceTimerUpdateIntervalMS = 100 }: Props){
+
+export const InteractionContext = React.createContext<any>(undefined);
+
+export default function InteractionChecker({ onInteract, debounceTimerResetMS = 500, debounceTimerUpdateIntervalMS = 100, children }: Props){
   const [pageInteracted, setPageInteracted] = React.useState(false);
   const [debounceTimer, setDebounceTimer] = React.useState(0);
   const [debounceTimerLock, setDebounceTimerLock] = React.useState(false);
+  const [interactionResult, setInteractionResult] = React.useState<any>(undefined);
   
   let loaded = React.useRef(false);
 
@@ -62,12 +67,15 @@ export default function InteractionChecker({ onInteract, debounceTimerResetMS = 
     if(pageInteracted){
       (async()=>{
         try{
-          onInteract();
+          const response = await onInteract();
+          setInteractionResult(response);
         }catch{console.error}
       })();
       setPageInteracted(false);
     }
   },[pageInteracted]);
   
-  return (<></>)
+  return (<InteractionContext.Provider value={interactionResult}>
+    { (children) ? children : <></> }
+  </InteractionContext.Provider>)
 }
