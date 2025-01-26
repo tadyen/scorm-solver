@@ -1,4 +1,6 @@
-//  https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Sharing_objects_with_page_scripts#xray_vision_in_firefox
+// This component provides content scripts the ability to expose page content which is normally isolated from the content script environment
+
+// https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Sharing_objects_with_page_scripts#xray_vision_in_firefox
 // https://developer.chrome.com/docs/extensions/reference/api/scripting#type-ExecutionWorld
 
 /// <reference types="chrome"/>
