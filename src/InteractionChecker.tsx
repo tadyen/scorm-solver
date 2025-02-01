@@ -1,19 +1,17 @@
 // interaction checker provider 
 
-import React, { Children } from "react";
+import React, { type PropsWithChildren } from "react";
 
 type EventHandler = ()=>(any | Promise<any>);
 
-interface Props {
-  onInteract: EventHandler,
-  debounceTimerResetMS?: number,
-  debounceTimerUpdateIntervalMS?: number,
-  children?: React.JSX.Element;
-}
-
 export const InteractionContext = React.createContext<any>(undefined);
 
-export default function InteractionChecker({ onInteract, debounceTimerResetMS = 500, debounceTimerUpdateIntervalMS = 100, children }: Props){
+export default function InteractionChecker<Props extends PropsWithChildren<{
+    onInteract: EventHandler,
+    debounceTimerResetMS?: number,
+    debounceTimerUpdateIntervalMS?: number,
+  }>>
+  ({debounceTimerResetMS = 500, debounceTimerUpdateIntervalMS = 100, onInteract, children }: Props){
   const [pageInteracted, setPageInteracted] = React.useState(false);
   const [debounceTimer, setDebounceTimer] = React.useState(0);
   const [debounceTimerLock, setDebounceTimerLock] = React.useState(false);
@@ -42,6 +40,7 @@ export default function InteractionChecker({ onInteract, debounceTimerResetMS = 
 
   // apply event listeners to check for page interactions
   React.useEffect(()=>{
+    const events = ["focus", "click"];
     function resetTimer(){
       setDebounceTimer((x)=>{
         if(x <= 0){
@@ -51,13 +50,15 @@ export default function InteractionChecker({ onInteract, debounceTimerResetMS = 
       });
     }
     if( ! loaded.current ){
-      window.addEventListener("focus", resetTimer);
-      window.addEventListener("click", resetTimer);
+      events.forEach((event)=>{
+        window.addEventListener(event, resetTimer, {capture: true})
+      })
     }
     loaded.current = true;
     return (()=>{
-      window.removeEventListener("focus", resetTimer);
-      window.removeEventListener("click", resetTimer);
+      events.forEach((event)=>{
+        window.removeEventListener(event, resetTimer, {capture: true})
+      })
       loaded.current = false;
     });
   },[]);

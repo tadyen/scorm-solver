@@ -23,7 +23,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://*.kineoportal.com.au/courses/*/quiz*"],
+      "matches": ["*://*.kineoportal.com.au/courses/unit*"],
       "js": [ "kineo.js" ],
       "run_at": "document_idle"
     }
