@@ -101,7 +101,6 @@ function Portal(props: {node?: HTMLElement, children?: React.JSX.Element}){
 function SolveButton(){
   function handleClick(){
     (async ()=>{
-      console.log("solve button async call")
       try{
         const iSpring = await Xray.exposeObject("iSpring")
         const lms = iSpring.LMS.instance();
