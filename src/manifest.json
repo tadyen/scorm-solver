@@ -24,7 +24,7 @@
     },
     {
       "matches": ["*://*.kineoportal.com.au/courses/unit*"],
-      "js": [ "kineo.js" ],
+      "js": [ "kineo/content.js" ],
       "run_at": "document_idle"
     }
   ],

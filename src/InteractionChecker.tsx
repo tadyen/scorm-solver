@@ -4,14 +4,21 @@ import React, { type PropsWithChildren } from "react";
 
 type EventHandler = ()=>(any | Promise<any>);
 
-export const InteractionContext = React.createContext<any>(undefined);
+export const InteractionResultContext = React.createContext<any>(undefined);
 
-export default function InteractionChecker<Props extends PropsWithChildren<{
-    onInteract: EventHandler,
-    debounceTimerResetMS?: number,
-    debounceTimerUpdateIntervalMS?: number,
-  }>>
-  ({debounceTimerResetMS = 500, debounceTimerUpdateIntervalMS = 100, onInteract, children }: Props){
+interface InteractionCheckerProps{
+  onInteract: EventHandler,
+  debounceTimerResetMS?: number,
+  debounceTimerUpdateIntervalMS?: number,
+  interactionDelayMS?: number,
+}
+export type InteractionCheckerOpts = Partial<InteractionCheckerProps>;
+export default function InteractionChecker<Props extends PropsWithChildren<InteractionCheckerProps>>({
+    debounceTimerResetMS = 500, 
+    debounceTimerUpdateIntervalMS = 100, 
+    interactionDelayMS = 0, 
+    onInteract, children 
+  }: Props){
   const [pageInteracted, setPageInteracted] = React.useState(false);
   const [debounceTimer, setDebounceTimer] = React.useState(0);
   const [debounceTimerLock, setDebounceTimerLock] = React.useState(false);
@@ -51,13 +58,13 @@ export default function InteractionChecker<Props extends PropsWithChildren<{
     }
     if( ! loaded.current ){
       events.forEach((event)=>{
-        window.addEventListener(event, resetTimer, {capture: true})
+        window.addEventListener(event, resetTimer, true);
       })
     }
     loaded.current = true;
     return (()=>{
       events.forEach((event)=>{
-        window.removeEventListener(event, resetTimer, {capture: true})
+        window.removeEventListener(event, resetTimer, true);
       })
       loaded.current = false;
     });
@@ -68,6 +75,7 @@ export default function InteractionChecker<Props extends PropsWithChildren<{
     if(pageInteracted){
       (async()=>{
         try{
+          await new Promise(f => setTimeout(f, interactionDelayMS));
           const response = await onInteract();
           setInteractionResult(response);
         }catch{console.error}
@@ -76,7 +84,7 @@ export default function InteractionChecker<Props extends PropsWithChildren<{
     }
   },[pageInteracted]);
   
-  return (<InteractionContext.Provider value={interactionResult}>
+  return (<InteractionResultContext.Provider value={interactionResult}>
     { (children) ? children : <></> }
-  </InteractionContext.Provider>)
+  </InteractionResultContext.Provider>)
 }

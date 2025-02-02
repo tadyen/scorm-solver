@@ -9,7 +9,7 @@ import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
 import { extendedGlobal, extendedWindow, Xray } from "xray.ts";
 import InteractionChecker from "InteractionChecker";
-import { InteractionContext } from "InteractionChecker";
+import { InteractionResultContext } from "InteractionChecker";
 
 const solveButtonRootID = "solve-button-root";
 const reactRootMountPointID = "react-root-mountpoint";
@@ -68,7 +68,7 @@ async function pageInteractionHandler(){
 
 // main addon content
 function Content(){
-  const isQuiz = useContext<Awaited<ReturnType<typeof pageInteractionHandler>>>(InteractionContext);
+  const isQuiz = useContext<Awaited<ReturnType<typeof pageInteractionHandler>>>(InteractionResultContext);
   const [solveButtonNode, setSolveButtonNode] = React.useState<HTMLElement | undefined>();
   
   React.useEffect(()=>{

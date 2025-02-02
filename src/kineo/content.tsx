@@ -16,17 +16,21 @@ import React from "react";
 import Solver, { SolverContext, type SolverContextProps } from "Solver";
 import ReactMounter from "ReactMounter";
 import { extendedGlobal, extendedWindow, Xray } from "xray.ts";
+import KineoQuiz from "./KineoQuiz";
+import {type InteractionCheckerOpts } from "InteractionChecker";
 
 const browser = extendedGlobal.browser;
 
-console.log("kineojs");
+const interactionCheckerOpts: InteractionCheckerOpts = {
+  interactionDelayMS: 1000,
+}
+
 // onLoad, mount only once per page
 const reactMounter = new ReactMounter();
 (()=>{
   if(extendedWindow.hasRun){ return; };
   extendedWindow.hasRun = true;
   reactMounter.render(<Content/>);
-  console.log("react mounted")
 })();
 
 const solverContextProps: SolverContextProps = {
@@ -36,6 +40,14 @@ const solverContextProps: SolverContextProps = {
   quizDetection: isQuiz,
 }
 
+function Content(){
+  return(<>
+    <SolverContext.Provider value={solverContextProps}>
+      <Solver interactionCheckerOpts={interactionCheckerOpts}/>
+    </SolverContext.Provider>
+  </>)
+}
+
 function isQuiz(){
   const quizDiv = document.querySelector("#mainActivity");
   console.log(`isQuiz checked ${(quizDiv !== null)}`);
@@ -43,29 +55,21 @@ function isQuiz(){
 }
 
 function SolveButton(){
+  const kineo = new KineoQuiz();
   function handleClick(){
     (async ()=>{
+      await kineo.init();
       try{
-        const model = await Xray.exposeObject("Model");
-        const questions = model.getInstance().allQuizQuestions as any[];
-        questions.forEach((e) => {
-          console.log(e.parts.part1.answers)
-        })
+        const questions = await kineo.questions;
+        const questionsDom = await kineo.questionsDom;
+        console.log(questionsDom);
+        console.log(questions);
       }catch{console.error}
     })();
   }
   return (
-    <button className="pagenav plain" id="solve-button" onClick={handleClick}>
-      <div className="fa fa-fw">Solve</div>
-    </button>
+    <a className="pagenav plain" id="solve-button" tabIndex={2} onClick={handleClick}>
+      <span>Solve</span>
+    </a>
   );
-}
-
-function Content(){
-  
-  return(<>
-    <SolverContext.Provider value={solverContextProps}>
-      <Solver/>
-    </SolverContext.Provider>
-  </>)
 }

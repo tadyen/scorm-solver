@@ -16,7 +16,7 @@ const build = Bun.build({
   root: rootdir,
   entrypoints: [
     "scorm.tsx",
-    "kineo.tsx"
+    "kineo/content.tsx"
   ],
   outdir: outdir
 });

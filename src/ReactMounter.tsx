@@ -35,7 +35,8 @@ export default class ReactMounter {
     const reactRootMountPrototype = document.createElement("div");
     reactRootMountPrototype.id = reactRootMountPointID;
     document.body.prepend(reactRootMountPrototype);
-    return reactRootMountPrototype;
+    this.mnt.elem = reactRootMountPrototype;
+    return this.mnt.elem;
   }
   
   private getMountRoot(){
@@ -43,7 +44,8 @@ export default class ReactMounter {
       return this.mnt.root
     }
     const element = this.getMountElement();
-    return createRoot(element);
+    this.mnt.root = createRoot(element);
+    return this.mnt.root;
   }
 
   get elem(){
