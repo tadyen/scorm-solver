@@ -4,8 +4,7 @@ import { Xray } from "xray"
 
 type ExtendsErrorUndefined<Response> = Response | Error | undefined
 
-type questionFormat = "radio" | "menu" | "checkbox"
-
+// As observed directly from browser
 interface AllQuizQuestionsByQuestionId{
   [key: number]: {
     id: number,
@@ -30,55 +29,107 @@ interface AllQuizQuestionsByQuestionId{
 type DomElement = Pick<HTMLElement, "id"|"classList"|"localName"> | {
   children: {[key: string|number]: DomElement}
 }
-type DomChild<T> = {[key: number|string]: T} | {[key: string|number]: DomElement};
+type DomChild<T> = {[key: string|number]: DomElement & T}
 
-interface QuestionsDom{
-  classList: ("quiz")[];
+// As observed directly from browser
+type GenericQuestionDom = DomChild<{
+  id: `question${number}`,
+  localName: "div",
   children: DomChild<{
-    id: `question${number}`,
-    localName: "div",
-    children: DomChild<{
-      localName: "p",
+    localName: "p",
+    children: DomChild<
+    {
+      localName: "fieldset",
       children: DomChild<{
-        localName: "fieldset",
+        localName: "div",
+        classList: ("checkboxOption")[],
         children: DomChild<{
-          localName: "div",
-          classList: ("checkboxOption")[],
-          children: DomChild<{
-            localName: "input"|"label",
-          }>
-        } | {
-          localName: "div",
-          classList: ("radioOption")[],
-          children: DomChild<{
-            localName: "option",
-          }>
+          localName: "input"|"label",
         }>
       } | {
-        localName: "select",
+        localName: "div",
+        classList: ("radioOption")[],
         children: DomChild<{
           localName: "option",
         }>
       }>
+    } | 
+    {
+      localName: "select",
+      children: DomChild<{
+        localName: "option",
+      }>
     }>
   }>
+}>
+
+type questionFormat = "radio" | "menu" | "checkbox"
+type QuestionDom<T> = T extends questionFormat
+  ? T extends "menu" 
+    ? Extract<GenericQuestionDom, {
+        children: DomChild<{
+          children: DomChild<{
+            localName: "select"
+          }>
+        }>
+      }>
+    : T extends "radio"
+      ? Extract<GenericQuestionDom, {
+        children: DomChild<{
+          children: DomChild<{
+            children: DomChild<{
+              classList: ("radioOption")[],
+            }>
+          }>
+        }>
+      }>
+      // "checkbox"
+      : Extract<GenericQuestionDom, {
+        children: DomChild<{
+          children: DomChild<{
+            children: DomChild<{
+              classList: ("checkboxOption")[],
+            }>
+          }>
+        }>
+      }>
+  : GenericQuestionDom
+;
+
+interface QuizDom{
+  classList: ("quiz")[];
+  children: GenericQuestionDom;
 }
 
-type ExtractQuestionsDom<T extends DomElement> = Extract<QuestionsDom, T>;
+type ExtractQuizDom<T extends DomElement> = Extract<QuizDom, T>;
+
+interface QuestionsMap {
+  id: number,
+  number: number,
+  text: string,
+  format: questionFormat,
+  dom: QuestionDom<questionFormat>;
+  answers: {
+    text: string,
+    correct: boolean
+  }[],
+}
 
 export default class KineoQuiz{
   protected _questions: ExtendsErrorUndefined<AllQuizQuestionsByQuestionId>;
-  protected _questionsDom: ExtendsErrorUndefined<QuestionsDom>;
+  protected _quizDom: ExtendsErrorUndefined<QuizDom>;
+  protected _questionsMap: ExtendsErrorUndefined<QuestionsMap[]>;
 
   constructor(){
     this._questions = undefined;
-    this._questionsDom = undefined;
+    this._quizDom = undefined;
+    this._questionsMap = undefined;
   }
 
   async init(){
     try{
       await this.getAllQuizQuestionsByQuestionId();
-      await this.getQuestionsDom();
+      await this.getQuizDom();
       return true;
     }catch{ console.error }
     return false;
@@ -95,36 +146,72 @@ export default class KineoQuiz{
     return undefined
   }
   get questions(){
-    const res = this.getAllQuizQuestionsByQuestionId()
-      .then((res)=>{
-        return res
-      })
-      .catch( console.error )
-    ;
-    return res
+    return this._questions;
   }
 
-  private async getQuestionsDom(): Promise<ExtendsErrorUndefined<QuestionsDom>>{
-    if( this._questionsDom ){ return this._questionsDom }
+  private async getQuizDom(): Promise<ExtendsErrorUndefined<QuizDom>>{
+    if( this._quizDom ){ return this._quizDom }
     try{
       const parentDom = document.querySelector(".quiz") as DomElement | null;
       if( ! parentDom ){
         return new Error("Could not find quiz DOM");
       }
-      this._questionsDom = parentDom as ExtractQuestionsDom<typeof parentDom>;
-      return this._questionsDom;
+      this._quizDom = parentDom as ExtractQuizDom<typeof parentDom>;
+      return this._quizDom;
     }catch{ handleError }
     return undefined
   }
-  get questionsDom(){
-    const res = this.getQuestionsDom()
-      .then((res)=>{
-        return res
-      })
-      .catch( console.error )
-    ;
-    return res
+  get quizDom(){
+    return this._quizDom;
   }
+
+  private async getQuestionsMap(): Promise<ExtendsErrorUndefined<QuestionsMap[]>>{
+    if( (! this._questions) || (! this._quizDom) ){
+      return new Error("getQuestionsMap is missing information. Is it called prematurely?");
+    }
+    if( this._questions instanceof Error){ return this._questions }
+    if( this._quizDom instanceof Error){ return this._quizDom }
+    const questionsMap: ExtendsErrorUndefined<Partial<QuestionsMap>[]> = [];
+    const extractPtag = /<p>(.+?)<\/p>/;
+    // Extract questions info
+    for( const [_, v] of Object.entries(this._questions)){
+      const ptext = extractPtag.exec(v.parts.text);
+      const map: ExtendsErrorUndefined<Partial<QuestionsMap>> = {
+        id: v.id,
+        number: undefined,
+        text: (ptext ? ptext[0] : ''),
+        format: v.parts.part1.format,
+        dom: undefined,
+        answers: v.parts.part1.answers,
+      }
+      questionsMap.push(map);
+    }
+    // Extract dom info. Numbers are unknown and must be matched by matching text
+    for(let i=0; i < questionsMap.length; i++){
+      const number = i+1;
+      questionsMap[i].number = number;
+      const dom = this._quizDom.children[`question${number}`];
+      switch(questionsMap[i].format){
+        case "radio":
+          questionsMap[i].dom = dom as QuestionDom<"radio">;
+          break;
+          case "checkbox":
+            questionsMap[i].dom = dom as QuestionDom<"checkbox">;
+            break;
+          case "menu":
+            questionsMap[i].dom = dom as QuestionDom<"menu">;
+            break;
+        default:
+          break;
+      }
+
+
+    }
+    
+
+    return 
+  }
+
 }
 
 
@@ -134,3 +221,13 @@ function handleError(e: Error | unknown | any){
   }
   return undefined
 }
+
+type asdf = Extract<GenericQuestionDom, DomChild<{
+  children: DomChild<{
+    children: DomChild<{
+      children: DomChild<{
+        classList: ("radioOption")[],
+      }>
+    }>
+  }>
+}>>

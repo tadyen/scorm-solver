@@ -22,7 +22,7 @@ import {type InteractionCheckerOpts } from "InteractionChecker";
 const browser = extendedGlobal.browser;
 
 const interactionCheckerOpts: InteractionCheckerOpts = {
-  interactionDelayMS: 1000,
+  interactionDelayMS: 1000,   // quiz elements on kineo take a while to load due to animations. Compensate for it
 }
 
 // onLoad, mount only once per page
@@ -61,7 +61,7 @@ function SolveButton(){
       await kineo.init();
       try{
         const questions = await kineo.questions;
-        const questionsDom = await kineo.questionsDom;
+        const questionsDom = await kineo.quizDom;
         console.log(questionsDom);
         console.log(questions);
       }catch{console.error}
